@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TCC Votes</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,Helvetica,sans-serif}
+body{background:#eef2f3;color:#222}
+header{background:linear-gradient(135deg,#0b7a32,#16a34a);color:white;padding:25px}
+header h1{font-size:2.2rem}
+.wrap{max-width:1300px;margin:auto;padding:20px}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+.card{background:#fff;border-radius:18px;padding:20px;box-shadow:0 8px 18px rgba(0,0,0,.08)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.score{display:grid;grid-template-columns:1fr 60px 1fr;gap:10px;align-items:center;text-align:center}
+input,select,button{width:100%;padding:12px;border:1px solid #ccc;border-radius:10px;font-size:15px}
+button{background:#16a34a;color:#fff;border:none;font-weight:bold;cursor:pointer}
+button:hover{background:#15803d}
+.game{background:#f8fafc;border-left:6px solid #16a34a;padding:15px;border-radius:12px;margin-bottom:12px}
+.votes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:10px}
+.vote{padding:10px;border-radius:8px;text-align:center}
+.gold{background:#fde68a}.silver{background:#e5e7eb}.bronze{background:#fdba74}
+table{width:100%;border-collapse:collapse}
+th,td{padding:10px;border-bottom:1px solid #eee;text-align:left}
+.top{background:#fef3c7}
+.delete{background:#dc2626;padding:8px 10px;border-radius:8px;color:white;border:none;cursor:pointer}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header>
+<div class="wrap">
+<h1>⚽ TCC Votes</h1>
+<p>TCC United vs TCC City • Best & Fairest</p>
+</div>
+</header>
+
+<div class="wrap">
+<div class="grid">
+
+<div>
+
+<div class="card">
+<h2>Add Match</h2>
+
+<div class="row">
+<div>
+<label>Round</label>
+<input id="round" type="number" min="1">
+</div>
+<div>
+<label>Date</label>
+<input id="date" type="date">
+</div>
+</div>
+
+<br>
+
+<div class="score">
+<div>
+<b>United</b>
+<input id="us" type="number" value="0">
+</div>
+
+<div style="font-size:30px;font-weight:bold;">-</div>
+
+<div>
+<b>City</b>
+<input id="cs" type="number" value="0">
+</div>
+</div>
+
+<br>
+
+<label>⭐ 3 Votes</label>
+<select id="v3"></select><br><br>
+
+<label>2 Votes</label>
+<select id="v2"></select><br><br>
+
+<label>1 Vote</label>
+<select id="v1"></select><br><br>
+
+<button id="save">Save Match</button>
+<p id="msg"></p>
+
+</div>
+
+<br>
+
+<div class="card">
+<h2>Games</h2>
+<div id="games"></div>
+</div>
+
+</div>
+
+<div>
+
+<div class="card">
+<h2>🏆 Live Tally</h2>
+
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Player</th>
+<th>Votes</th>
+</tr>
+</thead>
+
+<tbody id="ladder"></tbody>
+</table>
+
+</div>
+
+</div>
+
+</div>
+</div>
+
+<script>
+
+const united=[
+"Ash Adams","Sam Alexander","Harlan Anderson","Jarryn Baker","Jai Barrow","Jack Connor",
+"Sebastian Cooknell","Jonah Damore","Lachlan Darcy","Jack Dwyer","Ryder Egan",
+"Charlie Gardiner","Noah Gray","Harry Haslem","Tadhg Healy","William Johnstone",
+"Isaac Leeson","Tyson McCann","Hudson Moorfoot","Harvey Parker","Samuel Phillips",
+"Joar Riek","Jack Roberts","Max Robertson","Thomas Searle","Taj Shaw"
+];
+
+const city=[
+"Levi Armstrong","Logan Baum","Armi Black","Ingemar Borrack","Reece Charles","Will Darcy",
+"Xavier Dwyer","Jeddah Flanagan","Beau Genua","John Gerich","Matthew Hislop",
+"Bradley Ladhams","Miller Lockhart","Aidan Mahoney","Archie Martin","Saxon Nelson",
+"Nate Parker","Tadhg Parsons","Isaac Pietsch","Rory Smart"
+];
+
+const players=[
+...united.map(n=>({name:n,team:"United"})),
+...city.map(n=>({name:n,team:"City"}))
+];
+
+["v3","v2","v1"].forEach(id=>{
+const s=document.getElementById(id);
+s.innerHTML="<option value=''>Select Player</option>";
+players.forEach(p=>{
+const o=document.createElement("option");
+o.value=p.name;
+o.textContent=`${p.name} (${p.team})`;
+s.appendChild(o);
+});
+});
+
+let games=JSON.parse(localStorage.getItem("tccVotes")||"[]");
+
+function save(){
+localStorage.setItem("tccVotes",JSON.stringify(games));
+}
+
+function render(){
+
+games.sort((a,b)=>a.round-b.round);
+
+const gamesDiv=document.getElementById("games");
+const ladder=document.getElementById("ladder");
+
+gamesDiv.innerHTML="";
+
+let tally={};
+players.forEach(p=>tally[p.name]=0);
+
+games.forEach((g,index)=>{
+
+tally[g.v3]+=3;
+tally[g.v2]+=2;
+tally[g.v1]+=1;
+
+gamesDiv.innerHTML+=`
+<div class="game">
+<div style="display:flex;justify-content:space-between;">
+<div>
+<b>Round ${g.round}</b><br>
+<small>${g.date}</small><br><br>
+<div style="font-size:20px;font-weight:bold;">
+United ${g.us} - ${g.cs} City
+</div>
+</div>
+
+<button class="delete" onclick="removeGame(${index})">Delete</button>
+</div>
+
+<div class="votes">
+<div class="vote gold"><b>3</b><br>${g.v3}</div>
+<div class="vote silver"><b>2</b><br>${g.v2}</div>
+<div class="vote bronze"><b>1</b><br>${g.v1}</div>
+</div>
+
+</div>`;
+
+});
+
+const sorted=Object.entries(tally)
+.filter(x=>x[1]>0)
+.sort((a,b)=>b[1]-a[1]);
+
+ladder.innerHTML="";
+
+if(sorted.length===0){
+ladder.innerHTML="<tr><td colspan='3'>No votes yet</td></tr>";
+return;
+}
+
+sorted.forEach((p,i)=>{
+
+ladder.innerHTML+=`
+<tr class="${i===0?"top":""}">
+<td><b>#${i+1}</b></td>
+<td>${p[0]}</td>
+<td><b>${p[1]}</b></td>
+</tr>`;
+
+});
+
+}
+
+window.removeGame=function(i){
+if(confirm("Delete this game?")){
+games.splice(i,1);
+save();
+render();
+}
+}
+
+document.getElementById("save").onclick=()=>{
+
+const round=roundEl.value;
+const date=dateEl.value;
+const us=usEl.value;
+const cs=csEl.value;
+const v3=v3El.value;
+const v2=v2El.value;
+const v1=v1El.value;
+
+if(!round||!date||!v3||!v2||!v1){
+msg.textContent="Complete every field.";
+return;
+}
+
+if(new Set([v3,v2,v1]).size!==3){
+msg.textContent="Votes must be different players.";
+return;
+}
+
+games.push({round:+round,date,us,cs,v3,v2,v1});
+
+save();
+render();
+
+msg.textContent="Match Saved!";
+
+roundEl.value="";
+dateEl.value="";
+usEl.value=0;
+csEl.value=0;
+v3El.value="";
+v2El.value="";
+v1El.value="";
+
+}
+
+const roundEl=document.getElementById("round");
+const dateEl=document.getElementById("date");
+const usEl=document.getElementById("us");
+const csEl=document.getElementById("cs");
+const v3El=document.getElementById("v3");
+const v2El=document.getElementById("v2");
+const v1El=document.getElementById("v1");
+const msg=document.getElementById("msg");
+
+render();
+
+</script>
+
+</body>
+</html>
